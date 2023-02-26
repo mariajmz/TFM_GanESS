@@ -1,0 +1,29 @@
+/Generator/SingleParticle/region SPHERE
+/Generator/SingleParticle/particle gamma
+/Generator/SingleParticle/min_energy 1. MeV
+/Generator/SingleParticle/max_energy 2. MeV
+/Generator/SingleParticle/min_costheta -1
+/Generator/SingleParticle/max_costheta 1
+/Generator/SingleParticle/min_phi 0.
+/Generator/SingleParticle/max_phi 360.
+
+
+### PHYSICS
+/PhysicsList/Nexus/clustering           true
+/PhysicsList/Nexus/drift                true
+/PhysicsList/Nexus/electroluminescence  true
+
+
+### VERBOSITY
+/control/verbose   0
+/run/verbose       0
+/event/verbose     0
+/tracking/verbose  0
+
+/process/em/verbose 0
+
+
+### CONTROL
+/nexus/random_seed            -1
+/nexus/persistency/start_id   0
+/nexus/persistency/outputFile SingleParticle_Test
