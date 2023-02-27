@@ -1,0 +1,26 @@
+##si false se generan con energías random entre 1MeV y 2MeV
+/Generator/UserGenerator/user_ene_dist true
+
+## ahora no lee el archivo así que este comando no hace nada
+##/Generator/UserGenerator/ene_file histoprueba.txt
+
+
+### PHYSICS
+/PhysicsList/Nexus/clustering           false
+/PhysicsList/Nexus/drift                false
+/PhysicsList/Nexus/electroluminescence  false
+
+
+### VERBOSITY
+/control/verbose   0
+/run/verbose       0
+/event/verbose     0
+/tracking/verbose  0
+
+/process/em/verbose 0
+
+
+### CONTROL
+/nexus/random_seed            -1
+/nexus/persistency/start_id   0
+/nexus/persistency/outputFile Test
