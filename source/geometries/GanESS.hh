@@ -7,6 +7,8 @@
 #include "nexus/MaterialsList.h"
 
 #include "GanESSMaterials.hh"
+#include "UserGenerator.hh"
+
 
 #include <G4ThreeVector.hh>
 #include <G4GenericMessenger.hh>
@@ -23,12 +25,14 @@ class GanESS : public GeometryBase
     //Destructor
         ~GanESS();
         
+          
           G4ThreeVector GenerateVertex   (const G4String& region) const;
           G4ThreeVector GenerateVertexGas(const G4String& region) const;
           G4ThreeVector GenerateVertexSphere(const G4String& region) const;
+          void DefineGas(G4String gasname);
+          void DefineConfigurationParameters();
 
     private:
-        void DefineConfigurationParameters();
         void Construct();
         void BuildTPC(G4Material* gas, G4LogicalVolume* logic_world_vac);
 
@@ -36,6 +40,7 @@ class GanESS : public GeometryBase
         G4GenericMessenger* msg_;
 
         // Materials
+        G4String gas_name_; //to define via macro material
         G4Material* gas_;
         G4Material* vacuum_;
         G4Material* steel_;

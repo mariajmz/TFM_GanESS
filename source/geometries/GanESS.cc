@@ -36,13 +36,14 @@ GanESS::GanESS():
     msg_ (nullptr),
     gas_ (nullptr),
 
+    gas_name_          ("ARGON"),
     world_rad_         (70*cm),
     gas_rad_ 	       (35*cm),
     gas_length_         (70*cm),
     photoe_prob_       (0.),
 
-    pressure_          (10.* bar),
-    temperature_       (293. * kelvin), //esta ok??
+    pressure_          (10. * bar),
+    temperature_       (293. * bar), //<-esta ok??
     
    //dudas con todo esto
     sc_yield_          (22222 * 1/MeV), // Wsc = 45 eV, fr
@@ -62,12 +63,21 @@ GanESS::GanESS():
                                 "Control commands of the GanESS geometry.");
   // Parametrized dimensions
   DefineConfigurationParameters();
+  
+  //Select material
+  DefineGas(gas_name_);
+  
+  // Print gas information
+  G4cout<< "The drift gas is: " << gas_->GetName()<<G4endl;
+  G4cout<< "The drift gas pressure (bar) is: "<<gas_->GetPressure()/bar<<G4endl;
+  G4cout<< "The drift gas temperature (K) is: "<<gas_->GetTemperature()/kelvin<<G4endl;
+  G4cout<< "The drift gas density (kg/m3) is: "<<gas_->GetDensity()/(kg/m3)<<G4endl;
+    
 }
 
 GanESS::~GanESS()
 {
   delete msg_;
-
   delete drift_gen_;
   delete sphere_gen_;
   
@@ -78,7 +88,7 @@ void GanESS::Construct()
     //Materials
     steel_ = materials::Steel();
     steel_->SetMaterialPropertiesTable(new G4MaterialPropertiesTable());
-    //Gases: Xe, Kr, Ar
+    
     
     //gas_   = materials::GXe(pressure_, temperature_);
     //gas_->SetMaterialPropertiesTable(opticalprops::GXe(pressure_,
@@ -86,15 +96,11 @@ void GanESS::Construct()
                                                     //  sc_yield_,
                                                     //  elifetime_));
 
-    gas_     = gasses::fXegas(pressure_, temperature_);
+    //Gases: Xe, Kr, Ar
+    //gas_     = gasses::fXegas(pressure_, temperature_);
     //gas_     = gasses::fArgas(pressure_, temperature_);
     //gas_     = gasses::fKrgas(pressure_, temperature_);
-    
-    // Print gas information
-    G4cout<< "The drift gas is: " << gas_->GetName()<<G4endl;
-    G4cout<< "The drift gas pressure (bar) is: "<<gas_->GetPressure()/bar<<G4endl;
-    G4cout<< "The drift gas temperature (K) is: "<<gas_->GetTemperature()/kelvin<<G4endl;
-    G4cout<< "The drift gas density (kg/m3) is: "<<gas_->GetDensity()/(kg/m3)<<G4endl;
+    //gas_       = G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic");
     
     vacuum_ = G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic");
  
@@ -147,7 +153,7 @@ G4ThreeVector GanESS::GenerateVertexGas(const G4String& region) const
 
     if     (region == "GasEL")     {vertex = el_gen_->GenerateVertex("VOLUME");}
     else if(region == "GasDrift")  {vertex = drift_gen_->GenerateVertex("VOLUME");}
-    else{G4Exception("[GaP]", "GenerateVertex()", FatalException,
+    else{G4Exception("[GanESS]", "GenerateVertex()", FatalException,
                 "Unknown vertex generation region!");}
     return vertex;
 }
@@ -161,8 +167,43 @@ G4ThreeVector GanESS::GenerateVertexSphere(const G4String& region) const
      return vertex;
 }
 
-void GanESS::DefineConfigurationParameters()
+
+void GanESS::DefineGas(G4String gasname)
 {
+  if(gas_name_ == "KRIPTON"){
+  		G4cout<< " gas_name_ is " << gasname << G4endl;
+  		gas_     = gasses::fKrgas(pressure_, temperature_);
+  }
+  else{
+  	if(gas_name_ == "ARGON"){
+  		G4cout<< " gas_name_ is " << gasname << G4endl;
+  		gas_     = gasses::fArgas(pressure_, temperature_);
+  	}
+  	else{
+  		if(gas_name_ == "XENON"){
+  			G4cout<< " gas_name_ is " << gasname << G4endl;
+  			gas_     = gasses::fXegas(pressure_, temperature_);
+  		}
+  		else{
+  			if(gas_name_ == "VACUUM"){
+  			G4cout<< " gas_name_ is " << gasname << G4endl;
+  			gas_     = G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic");
+  			}
+  			else{
+  				G4cout<<"gas_name doesn't match any option"<<G4endl;
+  			}
+  		}
+  	}
+  }
+}
+
+
+void GanESS::DefineConfigurationParameters()
+{  
+
+  //Gas material
+    msg_->DeclareProperty("gas_name",gas_name_,
+  			"Gas");	
   // Gas pressure
   G4GenericMessenger::Command& pressure_cmd =
     msg_->DeclareProperty("pressure", pressure_,
@@ -282,8 +323,16 @@ void GanESS::BuildTPC(G4Material* gas, G4LogicalVolume* logic_world_vac)
     drift_region->AddRootLogicalVolume(logic_gas_drift);
 
     logic_gas_drift->SetUserLimits(new G4UserLimits(1.*mm));
+    
     // Set the DRIFT volume as an ionization sensitive detector
+    //position, time and energy deposition will be stored for
+    //each step of any charged particle crossssing the volume
+    
     IonizationSD* active_sd = new IonizationSD("/GanESS/DRIFT");
     logic_gas_drift->SetSensitiveDetector(active_sd);
     G4SDManager::GetSDMpointer()->AddNewDetector(active_sd);
 }
+
+
+
+
