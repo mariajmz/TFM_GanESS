@@ -1,8 +1,19 @@
-##si false se generan con energías random entre 1MeV y 2MeV
+### GEOMETRY
+#/Geometry/GanESS/gas_name KRIPTON
+#/Geometry/GanESS/pressure 25. bar
+#/Geometry/GanESS/temperature 293. kelvin
+
+### GENERATOR
+
+##false se generan con energías random entre 1MeV y 2MeV
+
 /Generator/UserGenerator/user_ene_dist true
 
+##true: 2 MeV
+/Generator/UserGenerator/mono_ene false
+
 ## ahora no lee el archivo así que este comando no hace nada
-##/Generator/UserGenerator/ene_file histoprueba.txt
+/Generator/UserGenerator/ene_file histoprueba.txt
 
 
 ### PHYSICS
@@ -19,8 +30,12 @@
 
 /process/em/verbose 0
 
+##ACTIONS
+/Actions/ValidationTrackingAction/valid_file GammasEnergy.root
+
 
 ### CONTROL
-/nexus/random_seed            -1
+/nexus/random_seed            55555
+#/nexus/random_seed	      -1
 /nexus/persistency/start_id   0
 /nexus/persistency/outputFile Test

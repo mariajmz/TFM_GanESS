@@ -1,3 +1,6 @@
+### GEOMETRY
+
+### GENERATOR
 /Generator/SingleParticle/region SPHERE
 /Generator/SingleParticle/particle gamma
 /Generator/SingleParticle/min_energy 1. MeV

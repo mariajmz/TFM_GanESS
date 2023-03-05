@@ -3,16 +3,19 @@
 //   
 // This class is the primary generator for particles with a user defined energy 
 // histogram      
-//
+// 
+// Modification based on MuonGenerator from nexus/generator
 //-----------------------------------------------------------------------------
 
-#include "DetectorConstruction.h"
-#include "GeometryBase.h"
-#include "MuonsPointSampler.h"
-#include "AddUserInfoToPV.h"
-#include "FactoryBase.h"
-#include "RandomUtils.h"
-#include "IOUtils.h"
+#include "UserGenerator.hh"
+
+#include "nexus/MuonGenerator.h"
+#include "nexus/DetectorConstruction.h"
+#include "nexus/GeometryBase.h"
+#include "nexus/AddUserInfoToPV.h"
+#include "nexus/FactoryBase.h"
+#include "nexus/RandomUtils.h"
+#include "nexus/IOUtils.h"
 
 #include <G4Event.hh>
 #include <G4GenericMessenger.hh>
@@ -31,39 +34,24 @@ REGISTER_CLASS(UserGenerator, G4VPrimaryGenerator)
 
 UserGenerator::UserGenerator():
 G4VPrimaryGenerator(), msg_(0), particle_definition_(0),
-user_ene_dist_(true), user_dir_{}, energy_min_(0.),
-energy_max_(0.),geom_(0), geom_solid_(0)
+user_ene_dist_(true),geom_(0),IsDistribution_(false),mono_ene_(false), geom_solid_(0), world_rad_(20*cm)
 {
 
  msg_ = new G4GenericMessenger(this, "/Generator/UserGenerator/",
 				"Control commands for user generator.");
-				
-G4GenericMessenger::Command& min_energy =
-    msg_->DeclareProperty("min_energy", energy_min_, "Set minimum kinetic energy of the particle.");
-  min_energy.SetUnitCategory("Energy");
-  min_energy.SetParameterName("min_energy", false);
-  min_energy.SetRange("min_energy>0.");
-
-G4GenericMessenger::Command& max_energy =
-    msg_->DeclareProperty("max_energy", energy_max_, "Set maximum kinetic energy of the particle");
-  max_energy.SetUnitCategory("Energy");
-  max_energy.SetParameterName("max_energy", false);
-  max_energy.SetRange("max_energy>0.");
-  
-msg_->DeclareProperty("region", region_,
+				 
+ msg_->DeclareProperty("region", region_,
 			"Set the region of the geometry where the vertex will be generated.");
 
 msg_->DeclareProperty("user_ene_dist", user_ene_dist_,
 			"Distribute particles energies according to file?");
 			
-msg_->DeclareProperty("angle_dist", dist_name_,
-			"Name of the angular distribution histogram.");
-			
-msg_->DeclareProperty("energy_file", ene_file_,
+msg_->DeclareProperty("mono_ene",mono_ene_,
+			"Generate mono energetic particles");
+						
+msg_->DeclareProperty("ene_file", ene_file_,
 			"Name of the file containing angular distribution.");
-			
-msg_->DeclareProperty("energy_dist", ene_name_,
-			"Name of the angular distribution histogram.");	
+
 
 DetectorConstruction* detconst = (DetectorConstruction*) G4RunManager::GetRunManager()->GetUserDetectorConstruction();
   geom_ = detconst->GetGeometry();
@@ -76,93 +64,100 @@ UserGenerator::~UserGenerator()
 }
 
 
-Generator::Generator()
- : G4VUserPrimaryGeneratorAction(),fParticleGun(0)
-{
-
-  //to run with particle gun    
-  G4int n_particle = 1;
-  fParticleGun  = new G4ParticleGun(n_particle);
-  
-  G4double Rmax = 5*cm;//must contain gas volume
-  fRmax3 = Rmax*Rmax*Rmax;
-  
-  G4ParticleDefinition* particle = G4ParticleTable::GetParticleTable()->FindParticle("gamma");
-  fParticleGun->SetParticleDefinition(particle);
-  GetHistogram();
-  
-}
-
 void UserGenerator::LoadUserDistribution()
 {
-
-	LoadDataFromFile(ene_file_,flux_,energy_,energy_bin_);
+	//energy_ and energy_bins_ only used
+	LoadHistData1D(ene_file_,flux_, energy_, energy_bins_);
 	
 	//convert vector to array
-	auto arr_flux = flux.data();
+	auto arr_flux = flux_.data();
 	
 	//Initialice random number generator based on flux distribution
 	fRandomGeneral_ = new G4RandGeneral(arr_flux,flux_.size());
-
-}
-
-
-//file format: value=intensity in bin, x=bin centre, x_bin=bin width
-void UserGenerator::LoadDatafromFile(std::string filename, std::vector<G4double> &intensity, std::vector<G4double> &x, std::vector<G4double> &x_bin)
-{
-
-	//open file
-	std::ifstream File_(filename);
-	
-	//Check if the file is properly opened
-	if (!FileIn_.is_open()){
-	      G4cout<<"Could not read file"<<G4endl;
-    	}
-    	
-      	// Read the Data from the file as strings
-    	std::string s_header, s_intensity, s_x;
-    	std::string s_x_bin;
-
-    	// Loop over the lines in the file and add the values to a vector
-    	while (FileIn_.peek()!=EOF) {
-
-      		std::getline(FileIn_, s_header, ',');
-
-      		if (s_header == "value"){
-
-       			std::getline(File_, s_instensity, ',');
-        		std::getline(File_, s_x, ',');
-        		std::getline(File_, s_x_bin, '\n');
-
-        		value.push_back(stod(s_intensity));
-        		x.push_back(stod(s_x));
-       		 	x_smear.push_back(stod(s_x_bin));
-      			}
-
-    	} 
-
-    File_.close();
 }
 
 
 void UserGenerator::GeneratePrimaryVertex(G4Event* event)
 {
 
-if (user_ener_dist_){
-      std::cout << "Generating particles using user distribution loaded from file" << std::endl;
-      LoadUserDistribution();
-      }
-//Generate uniform random direction in 4pi: RandomDirectionInRange
+	G4double kinetic_energy, energy, mass;
+	if(!IsDistribution_){
+		if (user_ene_dist_){
+      		//std::cout << "Generating particles using user distribution loaded from file" << std::endl;
+      		LoadUserDistribution();
+      		
+     	 }
+		//Set initialisation
+		IsDistribution_ = true;
+	
+	}
+	
+	if (user_ene_dist_){
+      		energy = GetEnergy();
+     	 }
+	
+	else{
+		//if user does not especified file Generate Uniform Random Energy in [Emin,Emax]
+		if(!mono_ene_) {energy = UniformRandomInRange(0.001*GeV,0.002*GeV);}
+		else {energy = 0.002*GeV;}	
+	}
+	
+	
+	particle_definition_ = 
+		G4ParticleTable::GetParticleTable()->FindParticle("gamma");
+	
+	// Particle properties
+  	mass          = particle_definition_->GetPDGMass();
+  	kinetic_energy        = energy - mass;
+  	
+	//Generate uniform random direction in 4pi: RandomDirectionInRange
+	G4ThreeVector p_dir;
+	p_dir = GetRandomDirection4pi();
+	
+	//Generate uniform random position in sphere surface 
+	G4ThreeVector pos;
+	G4RotationMatrix* rotation_gen_ = new G4RotationMatrix();
+    	rotation_gen_->rotateX(0*deg);
+    	rotation_gen_-> rotateY(0*deg);
+    	rotation_gen_->rotateZ(0*deg);
+    
+    	sphere_gen_  = new SpherePointSampler(world_rad_,0*cm,G4ThreeVector(0.,0.,0.),rotation_gen_,0,twopi,0,pi);
+	pos = sphere_gen_->GenerateVertex("SURFACE");
+	
 
+	//momentum
+	G4double pmod = std::sqrt(energy*energy - mass*mass);
+	
+	
+	G4double px = pmod*p_dir[0];
+	G4double py = pmod*p_dir[1];
+	G4double pz = pmod*p_dir[2];
+	
 
-//Generate uniform random position in sphere surface 
+	G4double time = 0.;
+	//Create a new vertex
+	G4PrimaryVertex *vertex = new G4PrimaryVertex(pos,time);
 
-
-//Create a new vertex
-G4VPrimaryVertex *vertex = new G4PrimaryVertex(position, time);
-
-//Create the new primary particle
-
+	//Create the new primary particle
+	G4PrimaryParticle* particle =
+			new G4PrimaryParticle(particle_definition_,px,py,pz);
+	vertex->SetPrimary(particle);
+	event->AddPrimaryVertex(vertex);
+	
+	/*
+	G4cout<<"----------------------------------------------------------------"<<G4endl;
+	G4cout << "PRIMARY GENERATED. Event ID: " << event->GetEventID() << G4endl;
+	G4cout<<"Energy is: "<<energy/MeV<<G4endl;
+	G4cout<<"Energy is: "<<vertex->GetPrimary()->GetTotalEnergy()<<G4endl;
+	G4cout<<"position " <<pos<<G4endl;
+	G4cout<<"position " <<vertex->GetPosition()<<G4endl;
+	G4cout<<"momentum is: "<<pmod<<G4endl;
+	G4cout<<"momentum components: px = "<<px << " py = "<<py<<" pz = "<<pz<<G4endl;
+	G4cout<<"momentum components: " <<vertex->GetPrimary()->GetTotalMomentum()<<G4endl;
+	G4cout<<"----------------------------------------------------------------"<<G4endl;
+	*/
+	
+	
 }
 
 
@@ -170,10 +165,24 @@ G4double UserGenerator::GetEnergy()
 {
 	//Generate random index 
 	//Scale by the flux and get and index
-	G4int rndm_index = GetRandBinIndex(fRandomGeneral_,flux_);
-	//Sample between bins with gaussian interpolation
-	G4double energy = Sample(energy_[rndm_index]*MeV,true,energy_bin_[rndm_index]*MeV);
 	
+	G4int rndm_index = GetRandBinIndex(fRandomGeneral_, flux_);
+	
+	//Sample between bins with gaussian interpolation
+	G4double energy = Sample(energy_[rndm_index]*keV,true,energy_bins_[rndm_index]*keV);
 	return energy;
+}
+
+
+G4ThreeVector UserGenerator::GetRandomDirection4pi()
+{
+	G4double cosTheta = G4UniformRand()*2 - 1.;
+	G4double sinTheta2 = 1. - cosTheta*cosTheta;
+	if(sinTheta2 < 0.) sinTheta2 = 0.;
+	G4double sinTheta = std::sqrt(sinTheta2);
+	
+	G4double phi = G4UniformRand()*twopi;
+	
+	return G4ThreeVector(sinTheta*std::cos(phi),sinTheta*std::sin(phi),cosTheta).unit();
 }
 
