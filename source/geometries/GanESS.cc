@@ -43,7 +43,7 @@ GanESS::GanESS():
     photoe_prob_       (0.),
 
     pressure_          (10. * bar),
-    temperature_       (293. * bar), //<-esta ok??
+    temperature_       (293. * kelvin), //<-esta ok??
     
    //dudas con todo esto
     sc_yield_          (22222 * 1/MeV), // Wsc = 45 eV, fr
