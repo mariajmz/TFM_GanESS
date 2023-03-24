@@ -34,7 +34,7 @@ REGISTER_CLASS(UserGenerator, G4VPrimaryGenerator)
 
 UserGenerator::UserGenerator():
 G4VPrimaryGenerator(), msg_(0), particle_definition_(0),
-user_ene_dist_(true),geom_(0),IsDistribution_(false),mono_ene_(false), geom_solid_(0), world_rad_(20*cm)
+user_ene_dist_(true),geom_(0),IsDistribution_(false),mono_ene_(false), geom_solid_(0), world_rad_(70*cm)
 {
 
  msg_ = new G4GenericMessenger(this, "/Generator/UserGenerator/",
@@ -93,13 +93,13 @@ void UserGenerator::GeneratePrimaryVertex(G4Event* event)
 	}
 	
 	if (user_ene_dist_){
-      		energy = GetEnergy();
+      		kinetic_energy = GetEnergy();
      	 }
 	
 	else{
 		//if user does not especified file Generate Uniform Random Energy in [Emin,Emax]
-		if(!mono_ene_) {energy = UniformRandomInRange(0.001*GeV,0.002*GeV);}
-		else {energy = 0.002*GeV;}	
+		if(!mono_ene_) {kinetic_energy = UniformRandomInRange(0.001*GeV,0.002*GeV);}
+		else {kinetic_energy = 2.*MeV;}	
 	}
 	
 	
@@ -108,14 +108,13 @@ void UserGenerator::GeneratePrimaryVertex(G4Event* event)
 	
 	// Particle properties
   	mass          = particle_definition_->GetPDGMass();
-  	kinetic_energy        = energy - mass;
+  	energy        = kinetic_energy + mass;
   	
 	//Generate uniform random direction in 4pi: RandomDirectionInRange
-	G4ThreeVector p_dir;
+	G4ThreeVector p_dir, pos;
 	p_dir = GetRandomDirection4pi();
 	
 	//Generate uniform random position in sphere surface 
-	G4ThreeVector pos;
 	G4RotationMatrix* rotation_gen_ = new G4RotationMatrix();
     	rotation_gen_->rotateX(0*deg);
     	rotation_gen_-> rotateY(0*deg);
@@ -124,7 +123,7 @@ void UserGenerator::GeneratePrimaryVertex(G4Event* event)
     	sphere_gen_  = new SpherePointSampler(world_rad_,0*cm,G4ThreeVector(0.,0.,0.),rotation_gen_,0,twopi,0,pi);
 	pos = sphere_gen_->GenerateVertex("SURFACE");
 	
-
+	
 	//momentum
 	G4double pmod = std::sqrt(energy*energy - mass*mass);
 	
@@ -144,10 +143,13 @@ void UserGenerator::GeneratePrimaryVertex(G4Event* event)
 	vertex->SetPrimary(particle);
 	event->AddPrimaryVertex(vertex);
 	
-	/*
-	G4cout<<"----------------------------------------------------------------"<<G4endl;
+	
+/*	G4cout<<"----------------------------------------------------------------"<<G4endl;
 	G4cout << "PRIMARY GENERATED. Event ID: " << event->GetEventID() << G4endl;
 	G4cout<<"Energy is: "<<energy/MeV<<G4endl;
+	G4cout<<"Kinetic energy is: "<<kinetic_energy/MeV<<G4endl;
+	G4cout<<"Mass: "<<mass<<G4endl;
+	
 	G4cout<<"Energy is: "<<vertex->GetPrimary()->GetTotalEnergy()<<G4endl;
 	G4cout<<"position " <<pos<<G4endl;
 	G4cout<<"position " <<vertex->GetPosition()<<G4endl;
@@ -155,7 +157,8 @@ void UserGenerator::GeneratePrimaryVertex(G4Event* event)
 	G4cout<<"momentum components: px = "<<px << " py = "<<py<<" pz = "<<pz<<G4endl;
 	G4cout<<"momentum components: " <<vertex->GetPrimary()->GetTotalMomentum()<<G4endl;
 	G4cout<<"----------------------------------------------------------------"<<G4endl;
-	*/
+*/	
+	
 	
 	
 }
@@ -164,12 +167,12 @@ void UserGenerator::GeneratePrimaryVertex(G4Event* event)
 G4double UserGenerator::GetEnergy()
 {
 	//Generate random index 
-	//Scale by the flux and get and index
+	//Scale by the flux and get an index
 	
 	G4int rndm_index = GetRandBinIndex(fRandomGeneral_, flux_);
 	
-	//Sample between bins with gaussian interpolation
-	G4double energy = Sample(energy_[rndm_index]*keV,true,energy_bins_[rndm_index]*keV);
+	//bool: Sample between bins with gaussian interpolation
+	G4double energy = Sample(energy_[rndm_index]*MeV,true,energy_bins_[rndm_index]*MeV);
 	return energy;
 }
 
@@ -182,7 +185,6 @@ G4ThreeVector UserGenerator::GetRandomDirection4pi()
 	G4double sinTheta = std::sqrt(sinTheta2);
 	
 	G4double phi = G4UniformRand()*twopi;
-	
 	return G4ThreeVector(sinTheta*std::cos(phi),sinTheta*std::sin(phi),cosTheta).unit();
 }
 
