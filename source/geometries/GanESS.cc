@@ -15,6 +15,7 @@
 #include <G4UserLimits.hh>
 #include <G4SDManager.hh>
 #include <G4PhysicalConstants.hh>
+#include <G4GenericMessenger.hh>
 
 #include "nexus/FactoryBase.h"
 #include "nexus/UniformElectricDriftField.h"
@@ -29,8 +30,11 @@
 
 using namespace nexus;
 
+
 REGISTER_CLASS(GanESS, GeometryBase)
 
+
+namespace nexus {
 GanESS::GanESS():
     GeometryBase(),
     msg_ (nullptr),
@@ -42,8 +46,8 @@ GanESS::GanESS():
     gas_length_         (70*cm),
     photoe_prob_       (0.),
 
-    pressure_          (10. * bar),
-    temperature_       (293. * kelvin), //<-esta ok??
+    pressure_          (50. * bar),
+    temperature_       (293. * kelvin), 
     
    //dudas con todo esto
     sc_yield_          (22222 * 1/MeV), // Wsc = 45 eV, fr
@@ -59,8 +63,8 @@ GanESS::GanESS():
     specific_vertex_{}
 {
   // Messenger
-  msg_ = new G4GenericMessenger(this, "/Geometry/GanESS/",
-                                "Control commands of the GanESS geometry.");
+  msg_ = new G4GenericMessenger(this, "/Geometry/GanESS/", "Control commands of the GanESS geometry.");
+                                
   // Parametrized dimensions
   DefineConfigurationParameters();
   
@@ -95,13 +99,9 @@ void GanESS::Construct()
                                                     //  temperature_,
                                                     //  sc_yield_,
                                                     //  elifetime_));
-
-    //Gases: Xe, Kr, Ar
-    //gas_     = gasses::fXegas(pressure_, temperature_);
-    //gas_     = gasses::fArgas(pressure_, temperature_);
-    //gas_     = gasses::fKrgas(pressure_, temperature_);
-    //gas_       = G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic");
-    
+                                                    
+                                                    
+    //gas_       = G4NistManager::Instance()->FindOrBuildMaterial("G4_WATER");
     vacuum_ = G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic");
  
     //Sphere, acting as the world volume
@@ -128,22 +128,19 @@ G4ThreeVector GanESS::GenerateVertex(const G4String& region) const
   if (region == "AD_HOC") {
     vertex = specific_vertex_;
   }
-
-  //// Gas regions
-  else if (
-    (region == "GasEL") ||
-    (region == "GasDrift")) {
-    vertex = GenerateVertexGas(region);
-  }
-
-  //// Sphere
-  if(region == "SPHERE") {vertex = GenerateVertexSphere(region);}
-
   else {
-    G4Exception("[GanESS]", "GenerateVertex()", FatalException,
-      "Unknown vertex generation region!");
-  }
+  	//// Gas regions
+  	if ((region == "GasEL") ||(region == "GasDrift")) {vertex = GenerateVertexGas(region);}
 
+  	//// Sphere
+  	else{
+  		if(region == "SPHERE") {vertex = GenerateVertexSphere(region);}
+  		else{
+  			   	G4Exception("[GanESS]", "GenerateVertex()", FatalException,
+     	 			"Unknown vertex generation region!");
+  	            }
+  	    }	
+	}
   return vertex;
 }
 
@@ -219,7 +216,7 @@ void GanESS::DefineConfigurationParameters()
   temperature_cmd.SetUnitCategory("Temperature");
   temperature_cmd.SetParameterName("temperature", false);
   temperature_cmd.SetRange("temperature>0.");
-
+  
   // e- lifetime
   G4GenericMessenger::Command& e_lifetime_cmd =
     msg_->DeclareProperty("elifetime", elifetime_,
@@ -302,7 +299,7 @@ void GanESS::DefineConfigurationParameters()
 }
 
 void GanESS::BuildTPC(G4Material* gas, G4LogicalVolume* logic_world_vac)
-{
+{    
     //// Drift
     G4Tubs          *solid_gas_drift = new G4Tubs("GasDrift", 0., gas_rad_, (gas_length_)/2, 0., 360.*deg);
     G4LogicalVolume *logic_gas_drift = new G4LogicalVolume(solid_gas_drift, gas, "GasDrift");
@@ -312,8 +309,8 @@ void GanESS::BuildTPC(G4Material* gas, G4LogicalVolume* logic_world_vac)
     
     // Define the drift field
     /*UniformElectricDriftField* drift_field = new UniformElectricDriftField();
-    drift_field->SetCathodePosition(drift_z + drift_length_/2);
-    drift_field->SetAnodePosition  (drift_z - drift_length_/2);
+    drift_field->SetCathodePosition(10*cm);
+    drift_field->SetAnodePosition  (-10*cm);
     drift_field->SetDriftVelocity(drift_vel_);
     drift_field->SetTransverseDiffusion(drift_transv_diff_);
     drift_field->SetLongitudinalDiffusion(drift_long_diff_);*/
@@ -331,8 +328,10 @@ void GanESS::BuildTPC(G4Material* gas, G4LogicalVolume* logic_world_vac)
     IonizationSD* active_sd = new IonizationSD("/GanESS/DRIFT");
     logic_gas_drift->SetSensitiveDetector(active_sd);
     G4SDManager::GetSDMpointer()->AddNewDetector(active_sd);
+    
+    
 }
 
-
+}
 
 

@@ -11,11 +11,14 @@
 
 
 #include <G4ThreeVector.hh>
-#include <G4GenericMessenger.hh>
+//#include <G4GenericMessenger.hh>
 
 
-using namespace nexus;
+class G4GenericMessenger;
 
+//using namespace nexus;
+
+namespace nexus {
 class GanESS : public GeometryBase
 {
 
@@ -31,10 +34,8 @@ class GanESS : public GeometryBase
           G4ThreeVector GenerateVertexSphere(const G4String& region) const;
           void DefineGas(G4String gasname);
           void DefineConfigurationParameters();
-
-    private:
-        void Construct();
-        void BuildTPC(G4Material* gas, G4LogicalVolume* logic_world_vac);
+          void Construct();
+	  void BuildTPC(G4Material* gas, G4LogicalVolume* logic_world_vac);
 
     private:
         G4GenericMessenger* msg_;
@@ -48,6 +49,7 @@ class GanESS : public GeometryBase
         // Gas parameters
         G4double pressure_;
         G4double temperature_;
+        
         G4double sc_yield_;
         G4double elifetime_;
         G4double drift_vel_;
@@ -98,5 +100,5 @@ class GanESS : public GeometryBase
         SpherePointSampler* sphere_gen_;
 
 };
-
+}
 #endif
