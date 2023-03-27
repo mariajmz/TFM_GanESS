@@ -3,9 +3,7 @@
 #include <G4Box.hh>
 #include <G4Tubs.hh>
 #include <G4Sphere.hh>
-//#include <G4SubtractionSolid.hh>
-//#include <G4UnionSolid.hh>
-//#include <G4MultiUnion.hh>
+#include <G4Orb.hh>
 #include <G4OpticalSurface.hh>
 #include <G4LogicalSkinSurface.hh>
 #include "G4LogicalVolume.hh"
@@ -40,13 +38,13 @@ GanESS::GanESS():
     msg_ (nullptr),
     gas_ (nullptr),
 
-    gas_name_          ("ARGON"),
+    //gas_name_          ("ARGON"),
     world_rad_         (70*cm),
     gas_rad_ 	       (35*cm),
     gas_length_         (70*cm),
     photoe_prob_       (0.),
 
-    pressure_          (50. * bar),
+    //pressure_          (50. * bar),
     temperature_       (293. * kelvin), 
     
    //dudas con todo esto
@@ -67,16 +65,7 @@ GanESS::GanESS():
                                 
   // Parametrized dimensions
   DefineConfigurationParameters();
-  
-  //Select material
-  DefineGas(gas_name_);
-  
-  // Print gas information
-  G4cout<< "The drift gas is: " << gas_->GetName()<<G4endl;
-  G4cout<< "The drift gas pressure (bar) is: "<<gas_->GetPressure()/bar<<G4endl;
-  G4cout<< "The drift gas temperature (K) is: "<<gas_->GetTemperature()/kelvin<<G4endl;
-  G4cout<< "The drift gas density (kg/m3) is: "<<gas_->GetDensity()/(kg/m3)<<G4endl;
-    
+     
 }
 
 GanESS::~GanESS()
@@ -89,30 +78,32 @@ GanESS::~GanESS()
 
 void GanESS::Construct()
 {
-    //Materials
+    //MATERIALS
+    
+    //Select gas 
+     DefineGas(gas_name_);
+  
+    //Print gas information
+     G4cout<< "The drift gas is: " << gas_->GetName()<<G4endl;
+     G4cout<< "The drift gas pressure (bar) is: "<<gas_->GetPressure()/bar<<G4endl;
+     G4cout<< "The drift gas temperature (K) is: "<<gas_->GetTemperature()/kelvin<<G4endl;
+     G4cout<< "The drift gas density (kg/m3) is: "<<gas_->GetDensity()/(kg/m3)<<G4endl;
+    
+    
     steel_ = materials::Steel();
     steel_->SetMaterialPropertiesTable(new G4MaterialPropertiesTable());
-    
-    
-    //gas_   = materials::GXe(pressure_, temperature_);
-    //gas_->SetMaterialPropertiesTable(opticalprops::GXe(pressure_,
-                                                    //  temperature_,
-                                                    //  sc_yield_,
-                                                    //  elifetime_));
-                                                    
-                                                    
-    //gas_       = G4NistManager::Instance()->FindOrBuildMaterial("G4_WATER");
+                                                   
     vacuum_ = G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic");
  
-    //Sphere, acting as the world volume
-    G4Sphere	    *solid_world_vac = new G4Sphere("World", 0, world_rad_, 0*deg, 360.*deg, 0*deg, 180.*deg);
+    //SPHERE, ACTING AS WORLD VOLUME
+    G4Sphere	    *solid_world_vac = new G4Sphere("World",0,world_rad_,0*deg,360.*deg,0*deg,180.*deg);
     G4LogicalVolume *logic_world_vac = new G4LogicalVolume(solid_world_vac, vacuum_, "World");
     this->SetLogicalVolume(logic_world_vac);
     
-    //Build inside detector
+    //BUILD INSIDE CYLINDER
     BuildTPC(gas_, logic_world_vac);
     
-    //Sphere generator                                    
+    //SPHERE GENERATOR                                   
     G4RotationMatrix* rotation_gen_ = new G4RotationMatrix();
     rotation_gen_->rotateX(0*deg);
     rotation_gen_-> rotateY(0*deg);
@@ -187,7 +178,8 @@ void GanESS::DefineGas(G4String gasname)
   			gas_     = G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic");
   			}
   			else{
-  				G4cout<<"gas_name doesn't match any option"<<G4endl;
+  				G4Exception("[GanESS]","DefineGas()",FatalException,
+  				"Unknown kind of gas, valid options are: XENON, ARGON, KRIPTON, VACUUM");
   			}
   		}
   	}
