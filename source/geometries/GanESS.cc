@@ -37,14 +37,17 @@ GanESS::GanESS():
     GeometryBase(),
     msg_ (nullptr),
     gas_ (nullptr),
-
-    //gas_name_          ("ARGON"),
-    world_rad_         (70*cm),
+    
+    shielding_	       (false),
+    world_rad_         (2000*cm),
+    sphere_rad_        (70*cm),
+    vessel_thickn_     (0.6*cm),
+    
     gas_rad_ 	       (35*cm),
     gas_length_         (70*cm),
+    
     photoe_prob_       (0.),
 
-    //pressure_          (50. * bar),
     temperature_       (293. * kelvin), 
     
    //dudas con todo esto
@@ -84,32 +87,86 @@ void GanESS::Construct()
      DefineGas(gas_name_);
   
     //Print gas information
+     G4cout<<"\n"<<G4endl;
+     G4cout<<"//-----------------------GAS INFO--------------------------//"<<G4endl;
      G4cout<< "The drift gas is: " << gas_->GetName()<<G4endl;
      G4cout<< "The drift gas pressure (bar) is: "<<gas_->GetPressure()/bar<<G4endl;
      G4cout<< "The drift gas temperature (K) is: "<<gas_->GetTemperature()/kelvin<<G4endl;
      G4cout<< "The drift gas density (kg/m3) is: "<<gas_->GetDensity()/(kg/m3)<<G4endl;
-    
+     G4cout<<"//---------------------------------------------------------//"<<G4endl;
+     G4cout<<"\n"<<G4endl;
     
     steel_ = materials::Steel();
     steel_->SetMaterialPropertiesTable(new G4MaterialPropertiesTable());
                                                    
     vacuum_ = G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic");
- 
+    
+    steel316ti_ = materials::Steel316Ti();
+    steel316ti_ -> SetMaterialPropertiesTable(new G4MaterialPropertiesTable());
+    
+    water_ = G4NistManager::Instance()->FindOrBuildMaterial("G4_WATER");
+    
+    hdpe_ = materials::HDPE();
+    hdpe_ -> SetMaterialPropertiesTable(new G4MaterialPropertiesTable());
+    
     //SPHERE, ACTING AS WORLD VOLUME
     G4Sphere	    *solid_world_vac = new G4Sphere("World",0,world_rad_,0*deg,360.*deg,0*deg,180.*deg);
     G4LogicalVolume *logic_world_vac = new G4LogicalVolume(solid_world_vac, vacuum_, "World");
     this->SetLogicalVolume(logic_world_vac);
     
-    //BUILD INSIDE CYLINDER
-    BuildTPC(gas_, logic_world_vac);
     
+    //SHIELDING
+    if(shielding_){
+    
+    	G4double sh_rad_ = gas_rad_ + vessel_thickn_ + sh_thickn_;
+    	G4double sh_length_ = gas_length_ + vessel_thickn_*2 + sh_thickn_*2;
+    	G4Tubs	    *solid_shield = new G4Tubs("Shielding",0,sh_rad_,sh_length_/2,0.,360.*deg);
+    		
+    	if(sh_material_ == "Water"){
+    		G4LogicalVolume *logic_shield = new G4LogicalVolume(solid_shield,water_,"Shielding");
+    		G4VPhysicalVolume *shield_phys = new G4PVPlacement(0,G4ThreeVector(0.,0.,0.),logic_shield,"Shielding",logic_world_vac,false,0,true);
+    		//// Build cylinder inside shielding volume
+   		BuildTPC(gas_,steel316ti_,logic_shield);
+    	}
+    		
+    	else if(sh_material_ == "HDPE"){
+    		G4LogicalVolume *logic_shield = new G4LogicalVolume(solid_shield,hdpe_,"Shielding");
+    		G4VPhysicalVolume *shield_phys = new G4PVPlacement(0,G4ThreeVector(0.,0.,0.),logic_shield,"Shielding",logic_world_vac,false,0,true);
+    		//// Build cylinder inside shielding volume
+   		BuildTPC(gas_,steel316ti_,logic_shield);
+   	}
+   		
+   	else{G4Exception("[GanESS]", "Construct()", FatalException,
+                "Shielding material has not been specified! Valid options are: Water or HDPE");}
+    }
+    	
+    else{
+    
+    	////Build cylinder inside world sphere
+    	BuildTPC(gas_,steel316ti_,logic_world_vac);
+    
+    }
+    
+    
+    //Print Shielding information
+     G4cout<<"\n"<<G4endl;
+     G4cout<<"//-----------------------SHIELDING INFO--------------------------//"<<G4endl;
+     G4cout<< "Shielding " << shielding_ <<G4endl;
+     if(shielding_)
+     {
+     	G4cout<<"Shielding material: "<< sh_material_ <<G4endl;
+     	G4cout<< "Shielding Thickness (cm):  "<< sh_thickn_/cm<<G4endl;
+     	G4cout<<"//----------------------------------------------------------------//"<<G4endl;
+     	G4cout<<"\n"<<G4endl;
+     }
+    
+   
     //SPHERE GENERATOR                                   
     G4RotationMatrix* rotation_gen_ = new G4RotationMatrix();
     rotation_gen_->rotateX(0*deg);
     rotation_gen_-> rotateY(0*deg);
     rotation_gen_->rotateZ(0*deg);
-    
-    sphere_gen_  = new SpherePointSampler(world_rad_,0*cm,G4ThreeVector(0.,0.,0.),rotation_gen_,0,twopi,0,pi);
+    sphere_gen_  = new SpherePointSampler(sphere_rad_,0*cm,G4ThreeVector(0.,0.,0.),rotation_gen_,0,twopi,0,pi);
 }
 
 G4ThreeVector GanESS::GenerateVertex(const G4String& region) const
@@ -173,14 +230,8 @@ void GanESS::DefineGas(G4String gasname)
   			gas_     = gasses::fXegas(pressure_, temperature_);
   		}
   		else{
-  			if(gas_name_ == "VACUUM"){
-  			G4cout<< " gas_name_ is " << gasname << G4endl;
-  			gas_     = G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic");
-  			}
-  			else{
-  				G4Exception("[GanESS]","DefineGas()",FatalException,
+  			G4Exception("[GanESS]","DefineGas()",FatalException,
   				"Unknown kind of gas, valid options are: XENON, ARGON, KRIPTON, VACUUM");
-  			}
   		}
   	}
   }
@@ -189,7 +240,18 @@ void GanESS::DefineGas(G4String gasname)
 
 void GanESS::DefineConfigurationParameters()
 {  
+	
+   //Shielding configuration
+   msg_->DeclareProperty("shielding",shielding_,"Set shielding");
+   msg_->DeclareProperty("sh_material",sh_material_,"Shielding material: in case of 1 layer");
 
+   //Shielding thickness
+   G4GenericMessenger::Command& sh_thickn_cmd =
+   msg_->DeclareProperty("sh_thickn",sh_thickn_,"Outter shielding layer thickness");
+   sh_thickn_cmd.SetUnitCategory("Length");
+   sh_thickn_cmd.SetParameterName("sh_thickn",false);
+   sh_thickn_cmd.SetRange("sh_thickn>0.");
+      
   //Gas material
     msg_->DeclareProperty("gas_name",gas_name_,
   			"Gas");	
@@ -208,6 +270,14 @@ void GanESS::DefineConfigurationParameters()
   temperature_cmd.SetUnitCategory("Temperature");
   temperature_cmd.SetParameterName("temperature", false);
   temperature_cmd.SetRange("temperature>0.");
+  
+  //Sphere point sampler radius 
+  G4GenericMessenger::Command& sphere_rad_cmd =
+   msg_->DeclareProperty("sphere_rad",sphere_rad_,
+   				"Radius of sphere point sampler.");
+   sphere_rad_cmd.SetUnitCategory("Length");
+   sphere_rad_cmd.SetParameterName("sphere_rad",false);
+   sphere_rad_cmd.SetRange("sphere_rad>0.");
   
   // e- lifetime
   G4GenericMessenger::Command& e_lifetime_cmd =
@@ -290,25 +360,27 @@ void GanESS::DefineConfigurationParameters()
   msg_->DeclarePropertyWithUnit("specific_vertex", "mm",  specific_vertex_, "Set generation vertex.");
 }
 
-void GanESS::BuildTPC(G4Material* gas, G4LogicalVolume* logic_world_vac)
+
+void GanESS::BuildTPC(G4Material* gas,G4Material* vessel_mat, G4LogicalVolume* logic_mother_volume)
 {    
+    
+    //// Vessel
+    G4double vessel_rad_ = gas_rad_ + vessel_thickn_;
+    G4double vessel_length_ = gas_length_ + vessel_thickn_*2;
+    
+    G4Tubs	    *solid_vessel = new G4Tubs("Vessel",0,vessel_rad_,vessel_length_/2,0.,360.*deg);
+    G4LogicalVolume *logic_vessel = new G4LogicalVolume(solid_vessel,vessel_mat,"Vessel");
+    G4VPhysicalVolume *vessel_phys = new G4PVPlacement(0,G4ThreeVector(0.,0.,0.),logic_vessel,"Vessel",logic_mother_volume,false,0,true);
+    
+    
     //// Drift
     G4Tubs          *solid_gas_drift = new G4Tubs("GasDrift", 0., gas_rad_, (gas_length_)/2, 0., 360.*deg);
     G4LogicalVolume *logic_gas_drift = new G4LogicalVolume(solid_gas_drift, gas, "GasDrift");
-    
-    G4VPhysicalVolume* drift_phys_ = new G4PVPlacement(0, G4ThreeVector(0., 0., 0.), logic_gas_drift, "GasDrift", logic_world_vac, false, 0, true);
+    G4VPhysicalVolume* drift_phys_ = new G4PVPlacement(0, G4ThreeVector(0., 0., 0.), logic_gas_drift, "GasDrift", logic_vessel, false, 0, true);
     drift_gen_  = new CylinderPointSampler2020(drift_phys_);
     
-    // Define the drift field
-    /*UniformElectricDriftField* drift_field = new UniformElectricDriftField();
-    drift_field->SetCathodePosition(10*cm);
-    drift_field->SetAnodePosition  (-10*cm);
-    drift_field->SetDriftVelocity(drift_vel_);
-    drift_field->SetTransverseDiffusion(drift_transv_diff_);
-    drift_field->SetLongitudinalDiffusion(drift_long_diff_);*/
     
     G4Region* drift_region = new G4Region("DRIFT");
-    //drift_region->SetUserInformation(drift_field);
     drift_region->AddRootLogicalVolume(logic_gas_drift);
 
     logic_gas_drift->SetUserLimits(new G4UserLimits(1.*mm));

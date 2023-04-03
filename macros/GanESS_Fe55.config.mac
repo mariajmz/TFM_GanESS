@@ -1,12 +1,17 @@
+### GEOMETRY
+/Geometry/GanESS/gas_name KRIPTON
+/Geometry/GanESS/pressure 50. bar
+/Geometry/GanESS/shielding true
+/Geometry/GanESS/sh_material HDPE
+/Geometry/GanESS/sh_thickn 10. cm
+/Geometry/GanESS/sphere_rad 70. cm
+
 
 ### GENERATOR
-# Kripton
-#/Generator/Kr83mGenerator/region  AD_HOC
-#
 /Generator/IonGenerator/region  AD_HOC
 /Generator/IonGenerator/atomic_number 26
 /Generator/IonGenerator/mass_number 55
-/Geometry/GanESS/specific_vertex  0. 0.  4.58 mm
+/Geometry/GanESS/specific_vertex  0. 0. 0. mm
 
 
 ### PHYSICS
@@ -27,4 +32,4 @@
 ### CONTROL
 /nexus/random_seed            -1
 /nexus/persistency/start_id   0
-/nexus/persistency/outputFile GanESS_3_1000_Fe55.h5
+/nexus/persistency/outputFile GanESS_Ar_Fe55

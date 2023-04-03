@@ -29,14 +29,14 @@ class GanESS : public GeometryBase
         ~GanESS();
         
           
-          G4ThreeVector GenerateVertex   (const G4String& region) const;
-          G4ThreeVector GenerateVertexGas(const G4String& region) const;
-          G4ThreeVector GenerateVertexSphere(const G4String& region) const;
-          void DefineGas(G4String gasname);
-          void DefineConfigurationParameters();
-          void Construct();
-	  void BuildTPC(G4Material* gas, G4LogicalVolume* logic_world_vac);
-
+        G4ThreeVector GenerateVertex   (const G4String& region) const;
+        G4ThreeVector GenerateVertexGas(const G4String& region) const;
+        G4ThreeVector GenerateVertexSphere(const G4String& region) const;
+        void DefineGas(G4String gasname);
+        void DefineConfigurationParameters();
+        void Construct();
+	void BuildTPC(G4Material* gas,G4Material* vessel_mat,G4LogicalVolume* logic_mother_volume);
+	
     private:
         G4GenericMessenger* msg_;
 
@@ -45,6 +45,13 @@ class GanESS : public GeometryBase
         G4Material* gas_;
         G4Material* vacuum_;
         G4Material* steel_;
+        G4Material* steel316ti_;
+        G4Material* hdpe_;
+        G4Material* water_;
+        
+        //Shielding configuration
+        G4bool shielding_;
+        G4String sh_material_;
 
         // Gas parameters
         G4double pressure_;
@@ -58,30 +65,15 @@ class GanESS : public GeometryBase
 
 	
 	//Dimensions
-	G4double world_rad_;
+	G4double world_rad_; 
+	G4double sphere_rad_; //sphere generator radius
+	G4double sh_thickn_;
+	G4double vessel_thickn_;
 	G4double gas_rad_;
 	G4double gas_length_;
 	
-	/*
-	// Vessel parameters
-        G4double vessel_out_rad_   ;
-        G4double vessel_out_length_;
-        G4double vessel_rad_   ;
-        G4double vessel_length_;
-
-        // Mesh
-        G4double mesh_rad_   ;
-        G4double mesh_thickn_;
-        G4double mesh_transparency_;
-
-        // Mesh Bracket
-        G4double meshBracket_rad_;
-        G4double meshBracket_thickn_ ;
-        G4double anodeBracket_rad_ ;
-        G4double anodeBracket_thickn_ ;*/
 
         G4double pmt_rad_;
-        
         
         // EL field (in kV/cm)
         G4double el_field_;
@@ -94,7 +86,6 @@ class GanESS : public GeometryBase
 
         // Vertex generation
         G4ThreeVector specific_vertex_;
-
         CylinderPointSampler2020* drift_gen_;
         CylinderPointSampler2020* el_gen_;
         SpherePointSampler* sphere_gen_;

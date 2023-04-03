@@ -1,15 +1,16 @@
+### GEOMETRY
+/Geometry/GanESS/gas_name ARGON
+/Geometry/GanESS/pressure 50. bar
+/Geometry/GanESS/shielding true
+/Geometry/GanESS/sh_material HDPE
+/Geometry/GanESS/sh_thickn 10. cm
+/Geometry/GanESS/sphere_rad 70. cm
+
 
 ### GENERATOR
-
-##false se generan con energías random entre 1MeV y 2MeV
-
+/Generator/UserGenerator/radius 70. cm
 /Generator/UserGenerator/user_ene_dist true
-
-##true: 2 MeV
-/Generator/UserGenerator/mono_ene false
-
-/Generator/UserGenerator/ene_file uniform20.txt
-
+/Generator/UserGenerator/ene_file uniform10.txt
 
 ### PHYSICS
 /PhysicsList/Nexus/clustering           false
@@ -29,4 +30,4 @@
 ### CONTROL
 /nexus/random_seed            -1
 /nexus/persistency/start_id   0
-/nexus/persistency/outputFile	uni20_gamma
+/nexus/persistency/outputFile	test

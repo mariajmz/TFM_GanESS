@@ -34,10 +34,10 @@ REGISTER_CLASS(UserGenerator, G4VPrimaryGenerator)
 
 UserGenerator::UserGenerator():
 G4VPrimaryGenerator(), msg_(0), particle_definition_(0),
-user_ene_dist_(true),geom_(0),IsDistribution_(false),mono_ene_(false), geom_solid_(0), world_rad_(70*cm)
+user_ene_dist_(true),geom_(0),IsDistribution_(false),mono_ene_(false), geom_solid_(0), radius_(70*cm)
 {
 
- msg_ = new G4GenericMessenger(this, "/Generator/UserGenerator/",
+msg_ = new G4GenericMessenger(this, "/Generator/UserGenerator/",
 				"Control commands for user generator.");
 				 
  msg_->DeclareProperty("region", region_,
@@ -51,7 +51,25 @@ msg_->DeclareProperty("mono_ene",mono_ene_,
 						
 msg_->DeclareProperty("ene_file", ene_file_,
 			"Name of the file containing angular distribution.");
+			
+G4GenericMessenger::Command& radius_cmd =
+msg_->DeclareProperty("radius",radius_,
+   			"Radius of sphere point sampler.");
+radius_cmd.SetUnitCategory("Length");
+radius_cmd.SetParameterName("radius",false);
+radius_cmd.SetRange("radius>0.");
 
+
+//Print information
+G4cout<<"\n"<<G4endl;
+G4cout<<"//-----------------------USER GENERATOR INFO--------------------------//"<<G4endl;
+G4cout<< "Sphere radius (cm): " << radius_/cm <<G4endl;
+if(user_ene_dist_)
+{
+     	G4cout<<"Using energy file distribution for neutrons."<<G4endl;
+}
+G4cout<<"//--------------------------------------------------------------------//"<<G4endl;
+G4cout<<"\n"<<G4endl;
 
 DetectorConstruction* detconst = (DetectorConstruction*) G4RunManager::GetRunManager()->GetUserDetectorConstruction();
   geom_ = detconst->GetGeometry();
@@ -98,13 +116,13 @@ void UserGenerator::GeneratePrimaryVertex(G4Event* event)
 	
 	else{
 		//if user does not especified file Generate Uniform Random Energy in [Emin,Emax]
-		if(!mono_ene_) {kinetic_energy = UniformRandomInRange(0.001*GeV,0.002*GeV);}
+		if(!mono_ene_) {kinetic_energy = UniformRandomInRange(0.002*GeV,0.001*GeV);}
 		else {kinetic_energy = 2.*MeV;}	
 	}
 	
 	
 	particle_definition_ = 
-		G4ParticleTable::GetParticleTable()->FindParticle("gamma");
+		G4ParticleTable::GetParticleTable()->FindParticle("neutron");
 	
 	// Particle properties
   	mass          = particle_definition_->GetPDGMass();
@@ -120,7 +138,7 @@ void UserGenerator::GeneratePrimaryVertex(G4Event* event)
     	rotation_gen_-> rotateY(0*deg);
     	rotation_gen_->rotateZ(0*deg);
     
-    	sphere_gen_  = new SpherePointSampler(world_rad_,0*cm,G4ThreeVector(0.,0.,0.),rotation_gen_,0,twopi,0,pi);
+    	sphere_gen_  = new SpherePointSampler(radius_,0*cm,G4ThreeVector(0.,0.,0.),rotation_gen_,0,twopi,0,pi);
 	pos = sphere_gen_->GenerateVertex("SURFACE");
 	
 	
@@ -144,7 +162,7 @@ void UserGenerator::GeneratePrimaryVertex(G4Event* event)
 	event->AddPrimaryVertex(vertex);
 	
 	
-/*	G4cout<<"----------------------------------------------------------------"<<G4endl;
+	/*G4cout<<"----------------------------------------------------------------"<<G4endl;
 	G4cout << "PRIMARY GENERATED. Event ID: " << event->GetEventID() << G4endl;
 	G4cout<<"Energy is: "<<energy/MeV<<G4endl;
 	G4cout<<"Kinetic energy is: "<<kinetic_energy/MeV<<G4endl;
@@ -156,11 +174,9 @@ void UserGenerator::GeneratePrimaryVertex(G4Event* event)
 	G4cout<<"momentum is: "<<pmod<<G4endl;
 	G4cout<<"momentum components: px = "<<px << " py = "<<py<<" pz = "<<pz<<G4endl;
 	G4cout<<"momentum components: " <<vertex->GetPrimary()->GetTotalMomentum()<<G4endl;
-	G4cout<<"----------------------------------------------------------------"<<G4endl;
-*/	
+	G4cout<<"----------------------------------------------------------------"<<G4endl;*/
 	
-	
-	
+
 }
 
 

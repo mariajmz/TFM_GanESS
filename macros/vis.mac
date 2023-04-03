@@ -40,14 +40,24 @@
 /vis/viewer/set/viewpointVector 1 0 0
 
 /vis/scene/add/trajectories smooth
-/vis/modeling/trajectories/create/drawByCharge
-/vis/modeling/trajectories/drawByCharge-0/default/setDrawStepPts true
-/vis/modeling/trajectories/drawByCharge-0/default/setStepPtsSize 2
+#/vis/modeling/trajectories/create/drawByCharge
+/vis/modeling/trajectories/create/drawByParticleID
+#/vis/modeling/trajectories/drawByCharge-0/default/setDrawStepPts true
+#/vis/modeling/trajectories/drawByCharge-0/default/setStepPtsSize 2
 
 ### Colors
 ### Colors
-/vis/geometry/set/colour GasDrift   0 0.9 0.9 0.9 0.5
-/vis/geometry/set/colour World     0 0.2 0.2 0.3 0.8
+/vis/viewer/set/background 0 0 0
+#/vis/geometry/set/colour [Name] [depth] [red] [green] [blue] [opacity]
+
+/vis/geometry/set/colour World     0 0.9 0.9 0.9 0.0
+
+/vis/geometry/set/colour Shielding 0 0.3 0.8 1 0.3
+
+/vis/geometry/set/colour Vessel     0 0.5 0.3 0.6 0.8
+/vis/geometry/set/colour GasDrift   0 1 1 1 1
+
+
 
 ### Drawing the tracks (if chosen in user actions)
 # Parameter (omittable) (default=0):
@@ -56,13 +66,13 @@
 # 2 : Choose G4SmoothTrajectory as default.
 # 3 : Choose G4RichTrajectory as default.
 # 4 : Choose G4RichTrajectory with auxiliary points as default.
-/tracking/storeTrajectory 2
+/tracking/storeTrajectory 3
 
 # Add trajectories to the current scene
 # Parameter (omittable). Options: "smooth", "rich"
-/vis/scene/add/trajectories smooth
+/vis/scene/add/trajectories rich
 
 # Requests viewer to accumulate hits, tracks, etc. at end of event.
 # 1st param (omittable): "accumulate" or "refresh"
 # 2nd param (omittable): <integer> (default = 100)
-/vis/scene/endOfEventAction accumulate
+/vis/scene/endOfEventAction accumulate 

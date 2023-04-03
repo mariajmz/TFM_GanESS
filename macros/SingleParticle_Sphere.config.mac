@@ -1,10 +1,17 @@
 ### GEOMETRY
+/Geometry/GanESS/gas_name XENON
+/Geometry/GanESS/pressure 10. bar
+/Geometry/GanESS/shielding true
+/Geometry/GanESS/sh_material HDPE
+/Geometry/GanESS/sh_thickn 5. cm 
+/Geometry/GanESS/sphere_rad 70. cm
+
 
 ### GENERATOR
 /Generator/SingleParticle/region SPHERE
-/Generator/SingleParticle/particle gamma
-/Generator/SingleParticle/min_energy 1. MeV
-/Generator/SingleParticle/max_energy 2. MeV
+/Generator/SingleParticle/particle neutron
+/Generator/SingleParticle/min_energy 10 MeV
+/Generator/SingleParticle/max_energy 20 MeV
 /Generator/SingleParticle/min_costheta -1
 /Generator/SingleParticle/max_costheta 1
 /Generator/SingleParticle/min_phi 0.
@@ -12,9 +19,9 @@
 
 
 ### PHYSICS
-/PhysicsList/Nexus/clustering           true
-/PhysicsList/Nexus/drift                true
-/PhysicsList/Nexus/electroluminescence  true
+/PhysicsList/Nexus/clustering           false
+/PhysicsList/Nexus/drift                false
+/PhysicsList/Nexus/electroluminescence  false
 
 
 ### VERBOSITY
@@ -25,8 +32,7 @@
 
 /process/em/verbose 0
 
-
 ### CONTROL
 /nexus/random_seed            -1
 /nexus/persistency/start_id   0
-/nexus/persistency/outputFile SingleParticle_Test
+/nexus/persistency/outputFile test

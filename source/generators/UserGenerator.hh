@@ -71,7 +71,7 @@ namespace nexus {
     std::vector<G4double> energy_bins_,azimuth_smear_,zenith_smear_;  ///< List of Energy bin smear values
     G4RandGeneral *fRandomGeneral_; ///< Pointer to the RNG flux distribution
     
-    G4double world_rad_;
+    G4double radius_;
     SpherePointSampler* sphere_gen_;
   };
 }
